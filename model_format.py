@@ -278,13 +278,19 @@ def main(metabolites, reactions, compartments, biomass, outfile_name):
         f.write("\n")
 
         # Write reactions to outfile
+        written_reactions = set()
+
         f.write(";Abbreviation;reactions;;;;\n")
         for reaction_id in sorted(reaction_dict):
             reaction = reformat_reaction(
                 reaction_dict[reaction_id], name_kegg_dict, cm_dict
             )
+            if reaction in written_reactions:
+                # Do not write more than the first of one specific reaction
+                continue
             if reaction:
                 f.write("reaction;" + reaction_id + ";" + reaction + ";;;;\n")
+                written_reactions.add(reaction)
 
         # Write biomass reaction to outfile (if applicable)
         if biomass:
