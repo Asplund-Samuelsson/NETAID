@@ -309,7 +309,7 @@ def main(metabolites, reactions, compartments, biomass, outfile_name):
 
         # Write metabolite names to outfile
         f.write(";Metabolite (don't change);Name in model\n")
-        for kegg_id in sorted(name_kegg_dict.values()):
+        for kegg_id in sorted(set(name_kegg_dict.values())):
             f.write("metabolite;" + kegg_id + ";" + kegg_id + "\n")
         f.write("\n")
 
