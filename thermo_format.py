@@ -13,6 +13,9 @@ def format_thermo_lines(thermo_lines):
         if line.endswith("nan"):
             # Skip lines without a formation delta G
             continue
+        if line.startswith("Compound ID"):
+            # Skip header line
+            continue
         metabolite = line.split(",")[0]
         try:
             thermo_lines_dict[metabolite].append(line)
@@ -35,6 +38,7 @@ def format_thermo_lines(thermo_lines):
 
 def test_format_thermo_lines():
     input_thermo_lines = [
+        "Compound ID,nH,charge,dG0_f\n",
         "C00008,14,-1,-1974.3299999999999\n",
         "C00008,15,0,-1992.5899999999999\n",
         "C00008,16,1,-2002.6800000000001\n",
