@@ -269,7 +269,10 @@ def main(metabolites, reactions, compartments, biomass, outfile_name):
         # Write compartment description to outfile
         f.write(";ID;pH;IS;Potential mV;Volume;\n")
         for line in compartment_description:
-            line = "compartment;" + cm_dict[line[0]] + ";" + ";".join(line[1:])
+            try:
+                line = "compartment;" + cm_dict[line[0]] + ";" + ";".join(line[1:])
+            except KeyError:
+                continue
             f.write(line)
 
         # Write "Model" header to outfile
