@@ -83,6 +83,20 @@ def test_create_compartment_dict():
         "C00011_[cyt] => C00011_[ext]"
     ]
 
+    # Input 3
+    iJR904_formatted = [
+        "[c]dhpppn + o2 --> hkndd",
+        "[c]25dkglcn + h + nadh --> 5dglcn + nad",
+        "[c]atp + coa + succ <==> adp + pi + succoa",
+        "[c]h2o + imp --> ins + pi",
+        "[c]atp + duri --> adp + dump + h",
+        "[c]accoa + spmd --> coa + h + n8aspmd",
+        "(2) h[c] + mql8[c] + no3[c] --> (2) h[e] + h2o[c] + mqn8[c] + no2[c]",
+        "h[e] + ser-D[e] <==> h[c] + ser-D[c]",
+        "[c]gtp + uri --> gdp + h + ump",
+        "[c]rml1p <==> dhap + lald-L"
+    ]
+
     # Expected output 1
     iJO1366_exp_output = {"e":"e", "p":"p", "c":"c"}
 
@@ -91,8 +105,12 @@ def test_create_compartment_dict():
         "cyt":"c", "cym":"y", "ext":"e", "pps":"p", "cyn":"n", "cny":"a"
     }
 
+    # Expected output 3
+    iJR904_exp_output = {'c':'c', 'e':'e'}
+
     assert create_compartment_dict(iJO1366_formatted) == iJO1366_exp_output
     assert create_compartment_dict(knoop_formatted) == knoop_exp_output
+    assert create_compartment_dict(iJR904_formatted) == iJR904_exp_output
 
 
 def reformat_reaction(equation, name_kegg_dict, compartment_dict):
@@ -106,8 +124,18 @@ def reformat_reaction(equation, name_kegg_dict, compartment_dict):
     # Check compartments
     cms = set([x.strip("[]") for x in re.findall("\[.+?\]", equation)])
 
+    # The iJR904 format may begin with a compartment designation
+    if len(cms) == 1 and equation.startswith("[" + list(cms)[0] + "]"):
+        cm = list(cms)[0]
+    else:
+        cm = None
+
     # Split on space and iterate through elements of formula
-    def stoich(eq_side):
+    def stoich(eq_side, cm=None):
+        if not cm:
+            cm_by_cpd = True
+        else:
+            cm_by_cpd = False
         new_eq_side = []
         for element in [x.split() for x in re.split(" \+ ", eq_side)]:
             if len(element) not in (1,2):
@@ -116,19 +144,23 @@ def reformat_reaction(equation, name_kegg_dict, compartment_dict):
                 try:
                     kegg_id = name_kegg_dict[element[-1]]
                 except KeyError:
-                    # With no corresponding KEGG ID, return empty string
-                    return ""
-                cm = compartment_dict[re.search("\[.+?\]", element[-1]).group().strip("[]")]
+                    try:
+                        kegg_id = name_kegg_dict[re.sub("\[.+?\]", "", element[-1])]
+                    except KeyError:
+                        # With no corresponding KEGG ID, return empty string
+                        return ""
+                if cm_by_cpd:
+                    cm = compartment_dict[re.search("\[.+?\]", element[-1]).group().strip("[]")]
                 if len(cms) > 1:
                     kegg_id = kegg_id + "[" + cm + "]"
                 if len(element) > 1:
-                    new_eq_side.append("(" + element[0] + ")" + " " + kegg_id)
+                    new_eq_side.append("(" + element[0].strip("()") + ")" + " " + kegg_id)
                 else:
                     new_eq_side.append(kegg_id)
         return " + ".join(new_eq_side)
 
-    rl = stoich(rl)
-    rr = stoich(rr)
+    rl = stoich(rl, cm)
+    rr = stoich(rr, cm)
 
     # Empty equation sides mean lack of KEGG ID; reaction should be ignored
     if rl == "" or rr == "":
@@ -234,8 +266,85 @@ def test_reformat_reaction():
         assert reformat_reaction(knoop_formatted[i], name_kegg_dict, cm) == net_formatted[i]
 
 
+    # Input format
+    iJR904_formatted = [
+        "[c]dhpppn + o2 --> hkndd",
+        "[c]25dkglcn + h + nadh --> 5dglcn + nad",
+        "[c]atp + coa + succ <==> adp + pi + succoa",
+        "[c]h2o + imp --> ins + pi",
+        "[c]atp + duri --> adp + dump + h",
+        "[c]accoa + spmd --> coa + h + n8aspmd",
+        "(2) h[c] + mql8[c] + no3[c] --> (2) h[e] + h2o[c] + mqn8[c] + no2[c]",
+        "h[e] + ser-D[e] <==> h[c] + ser-D[c]",
+        "[c]gtp + uri --> gdp + h + ump",
+        "[c]rml1p <==> dhap + lald-L"
+    ]
+
+    # Desired format
+    net_formatted = [
+        "[c]C04044 + C00007 = C04479",
+        "[c]C02780 + C00080 + C00004 = C01062 + C00003",
+        "[c]C00002 + C00010 + C00042 = C00008 + C00009 + C00091",
+        "[c]C00001 + C00130 = C00294 + C00009",
+        "[c]C00002 + C00526 = C00008 + C00365 + C00080",
+        "[c]C00024 + C00315 = C00010 + C00080 + C01029",
+        "(2) C00080[c] + C05819[c] + C00244[c] = (2) C00080[e] + C00001[c] + C00828[c] + C00088[c]",
+        "C00080[e] + C00740[e] = C00080[c] + C00740[c]",
+        "[c]C00044 + C00299 = C00035 + C00080 + C00105",
+        "[c]C01131 = C00111 + C00424"
+    ]
+
+    # Name to KEGG dictionary
+    name_kegg_dict = {
+        "25dkglcn":"C02780", "5dglcn":"C01062", "accoa":"C00024",
+        "adp":"C00008", "atp":"C00002", "coa":"C00010",
+        "dhap":"C00111", "dhpppn":"C04044", "dump":"C00365",
+        "duri":"C00526", "gdp":"C00035", "gtp":"C00044",
+        "h":"C00080", "h2o":"C00001", "hkndd":"C04479",
+        "imp":"C00130", "ins":"C00294", "lald-L":"C00424",
+        "mql8":"C05819", "mqn8":"C00828", "n8aspmd":"C01029",
+        "nad":"C00003", "nadh":"C00004", "no2":"C00088",
+        "no3":"C00244", "o2":"C00007", "pi":"C00009",
+        "rml1p":"C01131", "ser-D":"C00740", "spmd":"C00315",
+        "succ":"C00042", "succoa":"C00091", "ump":"C00105",
+        "uri":"C00299"
+    }
+
+    # Compartment dictionary
+    cm = create_compartment_dict(iJR904_formatted)
+
+    # Check each case
+    for i in range(len(iJR904_formatted)):
+        assert reformat_reaction(iJR904_formatted[i], name_kegg_dict, cm) == net_formatted[i]
+
+
+def add_metabolites_from_reaction(metabolites, reaction):
+    return metabolites.union(set(re.findall('C[0-9]{5}', reaction)))
+
+def test_add_metabolites_from_reaction():
+    metabolites = {'C00001', 'C19410'}
+    reactions = [
+        "[c]C00254 = C00166 + C00001 + C00011",
+        "[c]C01269 = C00251 + C00009",
+        "[c](2) C00430 = C00931 + (2) C00001",
+        "[c]C03319 + C00006 = C00688 + C00005 + C00080",
+        "",
+        "[c](1.32535) C00093 + (1.3327) C05764 = C00416 + (2.6507) C00229",
+        "C00011[c] = C00011[e]"
+    ]
+    exp_metabolites = {
+        'C00001', 'C19410', 'C00254', 'C00166', 'C00011',
+        'C01269', 'C00251', 'C00009', 'C00430', 'C00931',
+        'C03319', 'C00006', 'C00688', 'C00005', 'C00080',
+        'C00093', 'C05764', 'C00416', 'C00229'
+    }
+    for reaction in reactions:
+        metabolites = add_metabolites_from_reaction(metabolites, reaction)
+    assert metabolites == exp_metabolites
+
+
 # Main code block
-def main(metabolites, reactions, compartments, biomass, outfile_name):
+def main(metabolites, reactions, compartments, biomass, fluxes, outfile_name):
 
     # Read metabolite table into dictionary
     name_kegg_dict = dict(
@@ -254,6 +363,17 @@ def main(metabolites, reactions, compartments, biomass, outfile_name):
     reaction_dict = dict(
         [L.split("\t") for L in open(reactions, 'r').readlines()]
     )
+
+    # Reduce reactions to those in separate file (fluxes)
+    if fluxes:
+        accepted_reactions = set(filter(
+            None, [x.split("\t")[0] for x in open(fluxes).readlines()]
+        ))
+        for rejected_reaction in set(reaction_dict) - accepted_reactions:
+            try:
+                del(reaction_dict[rejected_reaction])
+            except KeyError:
+                continue
 
     # Construct compartment dictionary
     cm_dict = create_compartment_dict(reaction_dict.values())
@@ -283,6 +403,8 @@ def main(metabolites, reactions, compartments, biomass, outfile_name):
         # Write reactions to outfile
         written_reactions = set()
 
+        rxn_cpds = set() # Collect metabolites
+
         f.write(";Abbreviation;reactions;;;;\n")
         for reaction_id in sorted(reaction_dict):
             reaction = reformat_reaction(
@@ -293,6 +415,7 @@ def main(metabolites, reactions, compartments, biomass, outfile_name):
                 continue
             if reaction:
                 f.write("reaction;" + reaction_id + ";" + reaction + ";;;;\n")
+                rxn_cpds = add_metabolites_from_reaction(rxn_cpds, reaction)
                 written_reactions.add(reaction)
 
         # Write biomass reaction to outfile (if applicable)
@@ -310,10 +433,11 @@ def main(metabolites, reactions, compartments, biomass, outfile_name):
         f.write("Thermo names;;\n")
         f.write("\n")
 
-        # Write metabolite names to outfile
+        # Write metabolite names to outfile, if present in at least one reaction
         f.write(";Metabolite (don't change);Name in model\n")
         for kegg_id in sorted(set(name_kegg_dict.values())):
-            f.write("metabolite;" + kegg_id + ";" + kegg_id + "\n")
+            if kegg_id in rxn_cpds:
+                f.write("metabolite;" + kegg_id + ";" + kegg_id + "\n")
         f.write("\n")
 
 if __name__ == "__main__":
@@ -335,10 +459,14 @@ if __name__ == "__main__":
         help='Read tab-delimited file with compartment properties.'
     )
 
-    # Optional input: Biomass reaction
+    # Optional input: Biomass reaction, minimize
     parser.add_argument(
         '-b', '--biomass',
         help='File with one line describing the biomass reaction.'
+    )
+    parser.add_argument(
+        '-z', '--minimize',
+        help='Reduce model to reactions in tab-delimited flux file.'
     )
 
     # Output: NET-compatible model text file
@@ -352,5 +480,5 @@ if __name__ == "__main__":
     # Run main function
     main(
         args.metabolites, args.reactions, args.compartments,
-        args.biomass, args.outfile
+        args.biomass, args.minimize, args.outfile
     )
