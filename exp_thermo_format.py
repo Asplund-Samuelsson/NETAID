@@ -246,7 +246,7 @@ def main(model, thermo, conc, ratios, fluxes, experimental, out_thermo):
     x_out.extend(["metabolite;" + x for x in rats_list])
     x_out.append("")
     x_out.append(";ID;direction;")
-    x_out.extend([";".join(["flux"] + x + [""]) for x in flux_list])
+    x_out.extend([";".join(["flux"] + x) for x in flux_list])
     x_out = "\n".join(x_out + [""])
 
     metabolites = filter(lambda x: x in ther_dict, sorted(meta_dict))
