@@ -37,7 +37,7 @@ cd$Metabolite = paste(
 )
 
 # Create measured vs NET tag
-cd$Source = ifelse(cd$variable %in% c("LowIn", "HighIn"), "Measured", "NET-opt.")
+cd$Source = ifelse(cd$variable %in% c("LowIn", "HighIn"), "Bounds", "NET-opt.")
 cd$variable = ifelse(cd$variable %in% c("LowIn", "LowOut"), "Lower", "Upper")
 
 # Cast data
