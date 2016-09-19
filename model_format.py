@@ -149,6 +149,9 @@ def reformat_reaction(equation, name_kegg_dict, compartment_dict):
                     except KeyError:
                         # With no corresponding KEGG ID, return empty string
                         return ""
+                if kegg_id == "C00080":
+                    # Discard protons
+                    continue
                 if cm_by_cpd:
                     cm = compartment_dict[re.search("\[.+?\]", element[-1]).group().strip("[]")]
                 if len(cms) > 1:
@@ -186,6 +189,7 @@ def test_reformat_reaction():
         "2 o2[c] + q8h2[c]  -> 2 h[c] + 2 o2s[c] + q8[c] ",
         "2omph[c] + 0.5 o2[c]  -> 2ombzl[c] ",
         "3 q8h2[c] + 2 h[p] + no2[p]  -> 3 q8[c] + 2 h2o[p] + nh4[p] ",
+        "3 h[c] <=> 3 h[e]"
     ]
 
     # Desired format
@@ -193,12 +197,13 @@ def test_reformat_reaction():
         "C00052[e] = C00052[p]",
         "[c]C00025 + C16155 = C00026 + C16153",
         "C00299[e] = C00299[p]",
-        "C00002[c] + C00001[c] + C00245[p] = C00008[c] + C00080[c] + C00009[c] + C00245[c]",
+        "C00002[c] + C00001[c] + C00245[p] = C00008[c] + C00009[c] + C00245[c]",
         "",
         "[c](2) C04332 = C04732 + C00255",
-        "[c](2) C00007 + C00390 = (2) C00080 + (2) C00704 + C00399",
+        "[c](2) C00007 + C00390 = (2) C00704 + C00399",
         "[c]C05812 + (0.5) C00007 = C99999",
-        "(3) C00390[c] + (2) C00080[p] + C00088[p] = (3) C00399[c] + (2) C00001[p] + C01342[p]"
+        "(3) C00390[c] + C00088[p] = (3) C00399[c] + (2) C00001[p] + C01342[p]",
+        ""
     ]
 
     # Name to KEGG dictionary
@@ -229,7 +234,8 @@ def test_reformat_reaction():
         "C03319_[cyt] + C00006_[cyt] <= C00688_[cyt] + C00005_[cyt] + C00080_[cyt]",
         "PQH_B6_L_[cym] + 1 HB3p_B6_[cym] => 1 C10385_B6_S_[cym] + 1 C00080_[pps] + 1 HB2p_B6_[cym]",
         "1.32535 C00093_[cyt] + 1.3327 C05764_[cyt]  => C00416_PG_[cyt] + 2.6507 C00229_[cyt]",
-        "C00011_[cyt] => C00011_[ext]"
+        "C00011_[cyt] => C00011_[ext]",
+        "C00080_[cyt] <= C00080_[ext]"
     ]
 
     # Desired format
@@ -237,10 +243,11 @@ def test_reformat_reaction():
         "[c]C00254 = C00166 + C00001 + C00011",
         "[c]C01269 = C00251 + C00009",
         "[c](2) C00430 = C00931 + (2) C00001",
-        "[c]C03319 + C00006 = C00688 + C00005 + C00080",
+        "[c]C03319 + C00006 = C00688 + C00005",
         "",
         "[c](1.32535) C00093 + (1.3327) C05764 = C00416 + (2.6507) C00229",
-        "C00011[c] = C00011[e]"
+        "C00011[c] = C00011[e]",
+        ""
     ]
 
     # Name to KEGG dictionary
@@ -277,21 +284,23 @@ def test_reformat_reaction():
         "(2) h[c] + mql8[c] + no3[c] --> (2) h[e] + h2o[c] + mqn8[c] + no2[c]",
         "h[e] + ser-D[e] <==> h[c] + ser-D[c]",
         "[c]gtp + uri --> gdp + h + ump",
-        "[c]rml1p <==> dhap + lald-L"
+        "[c]rml1p <==> dhap + lald-L",
+        "(2) h[p] --> (2) h[e]"
     ]
 
     # Desired format
     net_formatted = [
         "[c]C04044 + C00007 = C04479",
-        "[c]C02780 + C00080 + C00004 = C01062 + C00003",
+        "[c]C02780 + C00004 = C01062 + C00003",
         "[c]C00002 + C00010 + C00042 = C00008 + C00009 + C00091",
         "[c]C00001 + C00130 = C00294 + C00009",
-        "[c]C00002 + C00526 = C00008 + C00365 + C00080",
-        "[c]C00024 + C00315 = C00010 + C00080 + C01029",
-        "(2) C00080[c] + C05819[c] + C00244[c] = (2) C00080[e] + C00001[c] + C00828[c] + C00088[c]",
-        "C00080[e] + C00740[e] = C00080[c] + C00740[c]",
-        "[c]C00044 + C00299 = C00035 + C00080 + C00105",
-        "[c]C01131 = C00111 + C00424"
+        "[c]C00002 + C00526 = C00008 + C00365",
+        "[c]C00024 + C00315 = C00010 + C01029",
+        "C05819[c] + C00244[c] = C00001[c] + C00828[c] + C00088[c]",
+        "C00740[e] = C00740[c]",
+        "[c]C00044 + C00299 = C00035 + C00105",
+        "[c]C01131 = C00111 + C00424",
+        ""
     ]
 
     # Name to KEGG dictionary
