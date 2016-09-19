@@ -174,6 +174,9 @@ def format_concentrations(conc_text, net_model_dict):
         if line == "":
             # Skip empty line
             continue
+        if line.startswith("KEGG"):
+            # Skip header
+            continue
         line = line.split("\t")
         metabolite = line[0]
         lo = str(float(line[1])*1000)
@@ -191,6 +194,7 @@ def format_concentrations(conc_text, net_model_dict):
 
 def test_format_concentrations():
     conc_text = "\n".join([
+        "KEGG.ID\tlow_M\thigh_M",
         "C00001\t1\t1",
         "C00002\t3.01207422253299e-05\t0.043431863332143",
         "C00003\t0.000131423040406459\t0.000272201955163885",
