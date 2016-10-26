@@ -119,7 +119,7 @@ def reformat_reaction(equation, name_kegg_dict, compartment_dict):
     equation = equation.strip()
 
     # Split reaction into left- and right-hand sides
-    rl, rr = re.split(" +[\=\-\>\<]+ +", equation)
+    rl, rr = re.split(" +[\=\-\>\<]+ +", re.sub("^\[.+?\]", "", equation))
 
     # Check compartments
     cms = set([x.strip("[]") for x in re.findall("\[.+?\]", equation)])
@@ -285,7 +285,9 @@ def test_reformat_reaction():
         "h[e] + ser-D[e] <==> h[c] + ser-D[c]",
         "[c]gtp + uri --> gdp + h + ump",
         "[c]rml1p <==> dhap + lald-L",
-        "(2) h[p] --> (2) h[e]"
+        "(2) h[p] --> (2) h[e]",
+        "[c](2) accoa <==> aacoa + coa",
+        "[c](3) h2o + h2s + (3) nadp <==> (5) h + (3) nadph + so3"
     ]
 
     # Desired format
@@ -300,7 +302,9 @@ def test_reformat_reaction():
         "C00740[e] = C00740[c]",
         "[c]C00044 + C00299 = C00035 + C00105",
         "[c]C01131 = C00111 + C00424",
-        ""
+        "",
+        "[c](2) C00024 = C00332 + C00010",
+        "[c](3) C00001 + C00283 + (3) C00006 = (3) C00005 + C00094"
     ]
 
     # Name to KEGG dictionary
@@ -316,7 +320,8 @@ def test_reformat_reaction():
         "no3":"C00244", "o2":"C00007", "pi":"C00009",
         "rml1p":"C01131", "ser-D":"C00740", "spmd":"C00315",
         "succ":"C00042", "succoa":"C00091", "ump":"C00105",
-        "uri":"C00299"
+        "uri":"C00299", "aacoa":"C00332", "h2s":"C00283",
+        "nadp":"C00006", "nadph":"C00005", "so3":"C00094"
     }
 
     # Compartment dictionary
