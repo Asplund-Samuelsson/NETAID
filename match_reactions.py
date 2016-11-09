@@ -14,7 +14,7 @@ def match(reaction1, reaction2):
 
     # Fail immediately if reactions are empty
     if not reaction1 or not reaction2:
-        return False
+        return (False, 0)
 
     # Find out if the reaction is restricted to one compartment
     try:
@@ -46,12 +46,16 @@ def match(reaction1, reaction2):
                     reaction[i][j][1] = reaction[i][j][1] + compartment
                 else:
                     reaction[i][j] = [1.0, reaction[i][j] + compartment]
-
             # Sort the elements by compound
             reaction[i] = sorted(reaction[i], key = lambda x: x[1])
-        return sorted(reaction, key = lambda x: "".join([y[1] for y in x]))
-    reaction1 = format_reaction(reaction1, compartment1)
-    reaction2 = format_reaction(reaction2, compartment2)
+        return reaction
+
+    r1_unsorted = format_reaction(reaction1, compartment1)
+    r2_unsorted = format_reaction(reaction2, compartment2)
+
+    # Sort the sides
+    reaction1 = sorted(r1_unsorted, key = lambda x: "".join([y[1] for y in x]))
+    reaction2 = sorted(r2_unsorted, key = lambda x: "".join([y[1] for y in x]))
 
     # Get metabolites for comparison
     reaction1_met = [[x[1] for x in y] for y in reaction1]
@@ -63,7 +67,7 @@ def match(reaction1, reaction2):
 
     # Compare reactions and return verdict
     if reaction1_met != reaction2_met:
-        return False
+        return (False, 0)
 
     sto_set = set()
 
@@ -71,9 +75,18 @@ def match(reaction1, reaction2):
         for j in range(len(reaction1_sto[i])):
             sto_set.add(reaction1_sto[i][j]/reaction2_sto[i][j])
             if len(sto_set) > 1:
-                return False
+                return (False, 0)
 
-    return True
+    # Reactions are matched; Determine directionality
+    r1_met = [[x[1] for x in y] for y in r1_unsorted]
+    r2_met = [[x[1] for x in y] for y in r2_unsorted]
+
+    # Reactions matched; same direction
+    if r1_met == r2_met:
+        return (True, 1)
+    # Reactions matched; different direction
+    else:
+        return (True, -1)
 
 
 def test_match():
@@ -106,9 +119,9 @@ def test_match():
         "[c]C00149 + C00006 = C00022 + C00011 + C00005"
     ]
     expected_matches = [
-        True, True, True, True,
-        True, True, False, True,
-        False, True, False, False
+        (True, -1), (True, 1), (True, -1), (True, 1),
+        (True, 1), (True, 1), (False, 0), (True, 1),
+        (False, 0), (True, 1), (False, 0), (False, 0)
     ]
 
     for pair in zip(reactions_1, reactions_2, expected_matches):
@@ -136,8 +149,9 @@ def main(infile1, infile2, outfile_name):
     outfile = open(outfile_name, 'w')
     for rxn_id_1 in reactions_1:
         for rxn_id_2 in reactions_2:
-            if match(reactions_1[rxn_id_1], reactions_2[rxn_id_2]):
-                outfile.write("\t".join([rxn_id_1, rxn_id_2]) + "\n")
+            match_result = match(reactions_1[rxn_id_1], reactions_2[rxn_id_2])
+            if match_result[0]:
+                outfile.write("\t".join([rxn_id_1, rxn_id_2, str(match_result[1])]) + "\n")
     outfile.close()
 
 if __name__ == "__main__":
