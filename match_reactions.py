@@ -130,11 +130,13 @@ def test_match():
 
 # Main code block
 
-def main(infile1, infile2, outfile_name):
+def main(infile1, infile2, single, outfile_name):
     # Read reactions from infile 1
     reactions_1 = {}
     for line in open(infile1, 'r').readlines():
         if line.startswith("reaction"):
+            if single and ";[" not in line:
+                continue
             line = line.strip().split(";")
             reactions_1[line[1]] = line[2]
 
@@ -142,6 +144,8 @@ def main(infile1, infile2, outfile_name):
     reactions_2 = {}
     for line in open(infile2, 'r').readlines():
         if line.startswith("reaction"):
+            if single and ";[" not in line:
+                continue
             line = line.strip().split(";")
             reactions_2[line[1]] = line[2]
 
@@ -169,6 +173,12 @@ if __name__ == "__main__":
         help='Read NET model infile 2.'
     )
 
+    # Options
+    parser.add_argument(
+        '-s', '--single', action='store_true',
+        help='Single compartment reactions only.'
+    )
+
     # Output: Tab-delimited file specifying matching reaction pairs
     parser.add_argument(
         'outfile',
@@ -178,4 +188,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Run main function
-    main(args.infile1, args.infile2, args.outfile)
+    main(args.infile1, args.infile2, args.single, args.outfile)
